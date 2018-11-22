@@ -59,6 +59,15 @@ func (p *Poll) ToPostActions(siteURL, pluginID, authorName string) []*model.Slac
 	}}
 }
 
+// TODO: comments
+func (p *Poll) AnswersToProps() map[string][]string {
+	props := map[string][]string{}
+	for _, option := range p.AnswerOptions {
+		props[option.Answer] = option.Voter
+	}
+	return props
+}
+
 // makeAdditionalText make descriptions about poll
 // This method returns markdown text, because it is used for SlackAttachment.Text field.
 func (p *Poll) makeAdditionalText(numberOfVotes int) string {
@@ -83,7 +92,9 @@ func (p *Poll) makeAdditionalText(numberOfVotes int) string {
 
 // ToEndPollPost returns the poll end message
 func (p *Poll) ToEndPollPost(authorName string, convert func(string) (string, *model.AppError)) (*model.Post, *model.AppError) {
-	post := &model.Post{}
+	post := &model.Post{
+		Type: model.POST_SLACK_ATTACHMENT,
+	}
 	fields := []*model.SlackAttachmentField{}
 
 	for _, o := range p.AnswerOptions {

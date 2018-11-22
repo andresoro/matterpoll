@@ -117,6 +117,7 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	post := &model.Post{}
 	model.ParseSlackAttachment(post, poll.ToPostActions(*p.ServerConfig.ServiceSettings.SiteURL, PluginId, displayName))
+	post.AddProp("answers", poll.AnswersToProps())
 	response.Update = post
 
 	if hasVoted {
