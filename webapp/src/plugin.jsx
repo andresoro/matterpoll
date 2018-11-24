@@ -3,7 +3,7 @@ import Manifest from './manifest';
 import PostType from './components/post_type';
 
 export default class MatterPollPlugin {
-    initialize(registry, store) {
+    initialize(registry) {
         registry.registerPostTypeComponent('custom_matterpoll', PostType);
     }
 

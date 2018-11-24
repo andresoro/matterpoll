@@ -145,7 +145,7 @@ ifneq ($(HAS_SERVER),)
 	cd server && $(GO) test -race -gcflags=-l -coverprofile=coverage.txt ./...
 endif
 ifneq ($(HAS_WEBAPP),)
-	cd webapp && $(NPM) run fix;
+	cd webapp && $(NPM) run fix && $(NPM) run test;
 endif
 
 # clean removes all build artifacts

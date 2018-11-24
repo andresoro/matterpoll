@@ -10,10 +10,9 @@ import {doPostAction} from 'mattermost-redux/actions/posts';
 import ActionButton from './action_button';
 
 function mapStateToProps(state) {
-    console.log("userid", getCurrentUserId(state))
     return {
         currentUserId: getCurrentUserId(state),
-    }
+    };
 }
 function mapDispatchToProps(dispatch) {
     return {

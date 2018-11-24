@@ -9,15 +9,11 @@ export default class ActionButton extends React.PureComponent {
         currentUserId: PropTypes.string,
         postId: PropTypes.string.isRequired,
         action: PropTypes.object.isRequired,
-        voters: PropTypes.object,
+        voters: PropTypes.array.isRequired,
 
         actions: PropTypes.shape({
             doPostAction: PropTypes.func.isRequired,
         }).isRequired,
-    }
-
-    constructor(props) {
-        super(props);
     }
 
     handleAction = (e) => {
@@ -28,16 +24,14 @@ export default class ActionButton extends React.PureComponent {
 
     render() {
         const {action, voters, currentUserId} = this.props;
-        console.log("currentUserId", currentUserId);
-        console.log("voters", voters);
         const voted = voters.includes(currentUserId);
-        
+
         return (
             <button
                 data-action-id={action.id}
                 key={action.id}
                 onClick={this.handleAction}
-                style={voted ? {"background-color": "red"} : {}}
+                style={voted ? {'background-color': 'red'} : {}}
             >
                 {action.name}
             </button>

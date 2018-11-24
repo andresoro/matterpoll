@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import ActionButton from './action_button'
+import ActionButton from './action_button';
 
 const {formatText, messageHtmlToComponent} = window.PostUtils;
 
@@ -9,6 +9,8 @@ export default class PostType extends React.PureComponent {
     static propTypes = {
         post: PropTypes.object.isRequired,
         theme: PropTypes.object.isRequired,
+
+        options: PropTypes.object,
 
         actions: PropTypes.shape({
             doPostAction: PropTypes.func.isRequired,
@@ -18,7 +20,7 @@ export default class PostType extends React.PureComponent {
     static defaultProps = {
         options: {
             atMentions: true,
-        }
+        },
     }
 
     getActionView = (attachment) => {
@@ -27,7 +29,6 @@ export default class PostType extends React.PureComponent {
             return '';
         }
         const answers = this.props.post.props.answers || {};
-        console.log("answers",answers);
 
         const content = [];
 
@@ -35,8 +36,7 @@ export default class PostType extends React.PureComponent {
             if (!action.id || !action.name) {
                 return;
             }
-            const voters =  answers[action.name] || [];
-            console.log("voters", voters);    
+            const voters = answers[action.name] || [];
 
             switch (action.type) {
             case 'button':
@@ -48,6 +48,7 @@ export default class PostType extends React.PureComponent {
                         voters={voters}
                     />
                 );
+                break;
             default:
                 break;
             }
@@ -61,7 +62,6 @@ export default class PostType extends React.PureComponent {
             </div>
         );
     };
-
 
     getFieldsTable = (attachment) => {
         const fields = attachment.fields;
@@ -152,15 +152,15 @@ export default class PostType extends React.PureComponent {
 
     isUrlSafe = (url) => {
         let unescaped;
-    
+
         try {
             unescaped = decodeURIComponent(url);
         } catch (e) {
             unescaped = unescape(url);
         }
-    
+
         unescaped = unescaped.replace(/[^\w:]/g, '').toLowerCase();
-    
+
         return !unescaped.startsWith('javascript:') && // eslint-disable-line no-script-url
             !unescaped.startsWith('vbscript:') &&
             !unescaped.startsWith('data:');
@@ -174,7 +174,7 @@ export default class PostType extends React.PureComponent {
         let preText;
         if (attachment.pretext) {
             preTextClass = 'attachment--pretext';
-            const formattedPreText = messageHtmlToComponent(formatText(attachment.pretext. this.props.options));
+            const formattedPreText = messageHtmlToComponent(formatText(attachment.pretext.this.props.options));
             preText = (
                 <div className='attachment__thumb-pretext'>
                     {formattedPreText}
@@ -206,7 +206,7 @@ export default class PostType extends React.PureComponent {
                 );
             }
         }
-        if (attachment.author_link && isUrlSafe(attachment.author_link)) {
+        if (attachment.author_link && this.isUrlSafe(attachment.author_link)) {
             author = (
                 <a
                     href={attachment.author_link}
@@ -220,7 +220,7 @@ export default class PostType extends React.PureComponent {
 
         let title;
         if (attachment.title) {
-            if (attachment.title_link && isUrlSafe(attachment.title_link)) {
+            if (attachment.title_link && this.isUrlSafe(attachment.title_link)) {
                 title = (
                     <h1 className='attachment__title'>
                         <a
@@ -294,6 +294,7 @@ export default class PostType extends React.PureComponent {
                         <div>
                             <div
                                 className={thumb ? 'attachment__body' : 'attachment__body attachment__body--no_thumb'}
+
                                 // onClick={handleFormattedTextClick}
                             >
                                 {attachmentText}
