@@ -85,7 +85,7 @@ func getCommandResponse(responseType, text, siteURL string, attachments []*model
 		Text:         text,
 		Username:     responseUsername,
 		IconURL:      fmt.Sprintf(responseIconURL, siteURL, PluginId),
-		Type:         "custom_matterpoll", // TODO: Declare as constant
+		Type:         POST_MATTERPOLL,
 		Attachments:  attachments,
 	}
 }

@@ -59,7 +59,7 @@ func (p *Poll) ToPostActions(siteURL, pluginID, authorName string) []*model.Slac
 	}}
 }
 
-// TODO: comments
+// AnswersToProps returns poll.AnswerOptions as map format aggregated for each answer
 func (p *Poll) AnswersToProps() map[string][]string {
 	props := map[string][]string{}
 	for _, option := range p.AnswerOptions {

@@ -173,7 +173,7 @@ func TestPluginExecuteCommand(t *testing.T) {
 			} else {
 				assert.Nil(err)
 				require.NotNil(t, r)
-				assert.Equal(model.POST_DEFAULT, r.Type)
+				assert.Equal(POST_MATTERPOLL, r.Type)
 				assert.Equal(responseUsername, r.Username)
 				assert.Equal(fmt.Sprintf(responseIconURL, testutils.GetSiteURL(), PluginId), r.IconURL)
 				assert.Equal(test.ExpectedResponseType, r.ResponseType)

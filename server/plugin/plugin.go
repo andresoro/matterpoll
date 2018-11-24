@@ -30,6 +30,7 @@ type MatterpollPlugin struct {
 }
 
 const minimumServerVersion = "5.6.0"
+const POST_MATTERPOLL = "custom_matterpoll"
 
 // OnActivate ensures a configuration is set and initialises the API
 func (p *MatterpollPlugin) OnActivate() error {
