@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,6 +45,7 @@ func (p *MatterpollPlugin) InitAPI() *mux.Router {
 
 	pollRouter := apiV1.PathPrefix("/polls/{id:[a-z0-9]+}").Subrouter()
 	pollRouter.HandleFunc("/vote/{optionNumber:[0-9]+}", p.handleVote).Methods("POST")
+	pollRouter.HandleFunc("/users/{userId:[a-z0-9]+}/voted", p.handleUserVoted).Methods("GET")
 	pollRouter.HandleFunc("/option/add", p.handleAddOption).Methods("POST")
 	pollRouter.HandleFunc("/option/add/request", p.handleAddOptionDialogRequest).Methods("POST")
 	pollRouter.HandleFunc("/end", p.handleEndPoll).Methods("POST")
@@ -117,7 +119,8 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	post := &model.Post{}
 	model.ParseSlackAttachment(post, poll.ToPostActions(*p.ServerConfig.ServiceSettings.SiteURL, PluginId, displayName))
-	post.AddProp("answers", poll.AnswersToProps())
+	// TODO: webapp cannot receive poll_id, unless someone vote. This is mid concerns.
+	post.AddProp("poll_id", poll.ID)
 	response.Update = post
 
 	if hasVoted {
@@ -257,6 +260,37 @@ func (p *MatterpollPlugin) handleAddOptionDialogRequest(w http.ResponseWriter, r
 		return
 	}
 	writePostActionIntegrationResponse(w, response)
+}
+
+func (p *MatterpollPlugin) handleUserVoted(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	pollID := vars["id"]
+	userID := vars["userId"]
+	response := &model.PostActionIntegrationResponse{}
+
+	poll, err := p.Store.Poll().Get(pollID)
+	if err != nil {
+		response.EphemeralText = commandGenericError
+		writePostActionIntegrationResponse(w, response)
+		return
+	}
+
+	v, err := poll.GetVotedAnswer(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		p.API.LogError(fmt.Sprintf("Failed to get voted answers with UserId: %s", userID))
+		return
+	}
+
+	b, err := json.Marshal(v)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		p.API.LogError(fmt.Sprintf("Failed to marshal voted answers: %v", v))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(b)
 }
 
 func (p *MatterpollPlugin) handleEndPoll(w http.ResponseWriter, r *http.Request) {

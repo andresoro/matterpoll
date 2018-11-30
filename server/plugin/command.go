@@ -75,6 +75,10 @@ func (p *MatterpollPlugin) ExecuteCommand(c *plugin.Context, args *model.Command
 
 	actions := newPoll.ToPostActions(*p.ServerConfig.ServiceSettings.SiteURL, PluginId, displayName)
 	response := getCommandResponse(model.COMMAND_RESPONSE_TYPE_IN_CHANNEL, "", *p.ServerConfig.ServiceSettings.SiteURL, actions)
+	// TODO: adding props here is good?
+	response.Props = model.StringInterface{
+		"poll_id": newPoll.ID,
+	}
 	p.API.LogDebug("Created a new poll", "response", response.ToJson())
 	return response, nil
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import ActionView from './action_view/action_view';
+import ActionView from './action_view';
 import FieldsTable from './fields/fields_table';
 
 const {formatText, messageHtmlToComponent} = window.PostUtils;

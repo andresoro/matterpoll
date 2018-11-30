@@ -6,32 +6,49 @@ import React from 'react';
 
 export default class ActionButton extends React.PureComponent {
     static propTypes = {
-        currentUserId: PropTypes.string,
-        postId: PropTypes.string.isRequired,
         action: PropTypes.object.isRequired,
-        voters: PropTypes.array.isRequired,
+        postId: PropTypes.string.isRequired,
+        pollId: PropTypes.string.isRequired,
+        userId: PropTypes.string.isRequired,
+        siteUrl: PropTypes.string.isRequired,
+        votedAnswers: PropTypes.array.isRequired,
+        handleAction: PropTypes.func.isRequired,
 
         actions: PropTypes.shape({
-            doPostAction: PropTypes.func.isRequired,
+            voteAnswer: PropTypes.func.isRequired,
         }).isRequired,
     }
 
     handleAction = (e) => {
         e.preventDefault();
         const actionId = e.currentTarget.getAttribute('data-action-id');
-        this.props.actions.doPostAction(this.props.postId, actionId);
+        this.props.actions.voteAnswer(
+            this.props.siteUrl,
+            this.props.postId, 
+            actionId,
+            this.props.pollId,
+            this.props.userId,
+        );
     };
 
+    
     render() {
-        const {action, voters, currentUserId} = this.props;
-        const voted = voters.includes(currentUserId);
+        const {action, pollId} = this.props;
+        const voted = this.props.votedAnswers || {};
+        const answers = voted[pollId] || {};
+        let style = {};
+        if (answers.voted_answers && answers.voted_answers.includes(action.name)) {
+            style = {
+                backgroundColor: 'red',
+            }
+        }
 
         return (
             <button
                 data-action-id={action.id}
                 key={action.id}
                 onClick={this.handleAction}
-                style={voted ? {'background-color': 'red'} : {}}
+                style={style}
             >
                 {action.name}
             </button>

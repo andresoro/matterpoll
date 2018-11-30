@@ -5,29 +5,27 @@ import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
+import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
+import {doPostAction} from 'mattermost-redux/actions/posts';
+import {fetchVotedAnswers} from '../../actions'
 
-import {votedAnswers} from '../../../selector'
-import {voteAnswer} from '../../../actions'
-
-import ActionButton from './action_button';
+import ActionView from './action_view';
 
 function mapStateToProps(state) {
     const config = getConfig(state);
-
     return {
         siteUrl: config.SiteURL,
-        votedAnswers: votedAnswers(state),
+        currentUserId: getCurrentUserId(state),
     };
 }
 
 function mapDispatchToProps(dispatch) {
     return {
         actions: bindActionCreators({
-            voteAnswer,
+            doPostAction,
+            fetchVotedAnswers,
         }, dispatch),
     };
 }
 
-
-export default connect(mapStateToProps, mapDispatchToProps)(ActionButton);
-
+export default connect(mapStateToProps, mapDispatchToProps)(ActionView);
