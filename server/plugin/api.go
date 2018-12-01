@@ -119,7 +119,6 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	post := &model.Post{}
 	model.ParseSlackAttachment(post, poll.ToPostActions(*p.ServerConfig.ServiceSettings.SiteURL, PluginId, displayName))
-	// TODO: webapp cannot receive poll_id, unless someone vote. This is mid concerns.
 	post.AddProp("poll_id", poll.ID)
 	response.Update = post
 
