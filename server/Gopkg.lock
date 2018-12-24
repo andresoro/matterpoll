@@ -150,8 +150,8 @@
     "utils/markdown",
   ]
   pruneopts = "NUT"
-  revision = "0c1207215852a8726c3f09dea157d597fec368df"
-  version = "v5.6.0"
+  revision = "3aed6efc6bb5a67fdb8237aac38d46fab3266e8d"
+  version = "v5.6.2"
 
 [[projects]]
   branch = "mattermost"
@@ -344,15 +344,15 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "e147a9138326bc0e9d4e179541ffd8af41cff8a9"
+  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
 
 [[projects]]
   branch = "master"
-  digest = "1:32268774426a8fc1c60cef12a2899163546b291e986351274c2165798a09b839"
+  digest = "1:1d7f49852f5b3d448b8c5534c4a122e37e77b030088a66d21239ccf5640bc969"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "4d1cda033e0619309c606fc686de3adcf599539e"
+  revision = "b4a75ba826a64a70990f11a225237acd6ef35c9f"
 
 [[projects]]
   digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
@@ -383,7 +383,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "bd91e49a0898e27abb88c339b432fa53d7497ac0"
+  revision = "bd9b4fb69e2ffd37621a6caa54dcbead29b546f2"
 
 [[projects]]
   digest = "1:3f21220da2c9af37c32adb314f1c609a6bf8548d5801bf43b95386af19c148bd"

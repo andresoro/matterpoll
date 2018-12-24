@@ -1,9 +1,11 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,6 +37,12 @@ const (
 	addOptionKey               = "answerOption"
 )
 
+// "Header": "http.Header{\
+// "Accept\":[]string{\"*/*\"},
+// \"Content-Length\":[]string{\"40\"},
+// \"Content-Type\":[]string{\"application/x-www-form-urlencoded\"},
+// \"User-Agent\":[]string{\"curl/7.54.0\"}}"}
+
 // InitAPI initializes the REST API
 func (p *MatterpollPlugin) InitAPI() *mux.Router {
 	r := mux.NewRouter()
@@ -44,6 +52,7 @@ func (p *MatterpollPlugin) InitAPI() *mux.Router {
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
 
 	pollRouter := apiV1.PathPrefix("/polls/{id:[a-z0-9]+}").Subrouter()
+	pollRouter.Use(p.verifyUserMiddleware)
 	pollRouter.HandleFunc("/vote/{optionNumber:[0-9]+}", p.handleVote).Methods("POST")
 	pollRouter.HandleFunc("/users/{userId:[a-z0-9]+}/voted", p.handleUserVoted).Methods("GET")
 	pollRouter.HandleFunc("/option/add", p.handleAddOption).Methods("POST")
@@ -55,6 +64,24 @@ func (p *MatterpollPlugin) InitAPI() *mux.Router {
 
 func (p *MatterpollPlugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.router.ServeHTTP(w, r)
+}
+
+func (p *MatterpollPlugin) verifyUserMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		c, _ := ioutil.ReadAll(r.Body)
+		request := model.PostActionIntegrationRequestFromJson(bytes.NewReader(c))
+		if request == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		p.API.LogDebug("Middleware", "Method", r.Method, "URL", r.URL.Path, "UserId", request.UserId, "Header", fmt.Sprintf("%#v", r.Header))
+		r.Body = ioutil.NopCloser(bytes.NewReader(c))
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (p *MatterpollPlugin) handleInfo(w http.ResponseWriter, _ *http.Request) {
@@ -77,6 +104,7 @@ func (p *MatterpollPlugin) handleLogo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
+	p.API.LogDebug("hoge", "Header", fmt.Sprintf("%#v", r.Header))
 	vars := mux.Vars(r)
 	pollID := vars["id"]
 	optionNumber, _ := strconv.Atoi(vars["optionNumber"])
@@ -91,6 +119,7 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	poll, err := p.Store.Poll().Get(pollID)
 	if err != nil {
+		p.API.LogDebug("getpoll")
 		response.EphemeralText = commandGenericError
 		writePostActionIntegrationResponse(w, response)
 		return
@@ -98,6 +127,7 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	displayName, appErr := p.ConvertCreatorIDToDisplayName(poll.Creator)
 	if appErr != nil {
+		p.API.LogDebug("convert")
 		response.EphemeralText = commandGenericError
 		writePostActionIntegrationResponse(w, response)
 		return
@@ -105,12 +135,14 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 
 	hasVoted := poll.HasVoted(userID)
 	if err = poll.UpdateVote(userID, optionNumber); err != nil {
+		p.API.LogDebug("updatevote")
 		response.EphemeralText = commandGenericError
 		writePostActionIntegrationResponse(w, response)
 		return
 	}
 
 	if err = p.Store.Poll().Save(poll); err != nil {
+		p.API.LogDebug("savepoll")
 		response.EphemeralText = commandGenericError
 		writePostActionIntegrationResponse(w, response)
 		return
