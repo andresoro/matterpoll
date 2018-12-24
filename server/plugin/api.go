@@ -427,7 +427,6 @@ func (p *MatterpollPlugin) handleDeletePoll(w http.ResponseWriter, r *http.Reque
 func writePostActionIntegrationResponse(w http.ResponseWriter, response *model.PostActionIntegrationResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-<<<<<<< HEAD
 	_, _ = w.Write(response.ToJson())
 }
 
@@ -435,7 +434,4 @@ func writeSubmitDialogResponse(w http.ResponseWriter, response *model.SubmitDial
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(response.ToJson())
-=======
-	w.Write(response.ToJson())
->>>>>>> Fix breaking changes
 }
