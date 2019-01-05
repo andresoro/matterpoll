@@ -159,6 +159,19 @@ func (p *MatterpollPlugin) handleVote(w http.ResponseWriter, r *http.Request) {
 		response.EphemeralText = voteCounted
 	}
 	writePostActionIntegrationResponse(w, response)
+
+	v, err := poll.GetVotedAnswer(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		p.API.LogError(fmt.Sprintf("Failed to get voted answers with UserId: %s", userID))
+		return
+	}
+
+	p.API.PublishWebSocketEvent("has_voted", map[string]interface{}{
+		"user_id":       v.UserID,
+		"poll_id":       v.PollID,
+		"voted_answers": v.VotedAnswers,
+	}, &model.WebsocketBroadcast{TeamId: request.TeamId})
 }
 
 func (p *MatterpollPlugin) handleAddOption(w http.ResponseWriter, r *http.Request) {

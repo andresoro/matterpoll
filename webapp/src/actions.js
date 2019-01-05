@@ -1,33 +1,42 @@
-import Manifest from './manifest'
-
 import {doPostAction} from 'mattermost-redux/actions/posts';
+
+import Manifest from './manifest';
 
 export const VOTE_ANSWER = Manifest.PluginId + '_vote_answer';
 export const FETCH_VOTED_ANSWERS = Manifest.PluginId + '_fetch_voted_answers';
 
-export const voteAnswer = (siteUrl, postId, actionId, pollId, userId) => async (dispatch) => {
-    return dispatch(doPostAction(postId, actionId)).then(()=> {
-        return dispatch(fetchVotedAnswers(siteUrl, pollId, userId))
-    })
-}
+export const voteAnswer = (postId, actionId) => async (dispatch) => {
+    return dispatch(doPostAction(postId, actionId));
+};
+
+export const websocketHasVoted = (data) => async (dispatch) => {
+    return dispatch({
+        type: FETCH_VOTED_ANSWERS,
+        data: {
+            user_id: data.user_id,
+            poll_id: data.poll_id,
+            voted_answers: data.voted_answers,
+        },
+    });
+};
 
 export const fetchVotedAnswers = (siteUrl, pollId, userId) => async (dispatch) => {
-    if (pollId === undefined || pollId === '') {
-        return 
+    if (typeof pollId === 'undefined' || pollId === '') {
+        return;
     }
 
     let url = siteUrl;
-    // TODO: Is this check needed? 
+    // TODO: Is this check needed?
     if (!url.endsWith('/')) {
         url += '/';
     }
     // TODO: ugly...
     url = url + 'plugins/' + Manifest.PluginId + '/api/v1/polls/' + pollId + '/users/' + userId + '/voted';
     // TODO: Handle error.
-    return fetch(url).then((r) => r.json()).then((r) => {
+    fetch(url).then((r) => r.json()).then((r) => {
         dispatch({
             type: FETCH_VOTED_ANSWERS,
             data: r,
-        })
+        });
     });
-}
+};
