@@ -1,4 +1,8 @@
 version: 2.1
+
+orbs:
+  codecov: codecov/codecov@1.0.4
+
 jobs:
   lint:
     docker:
@@ -16,9 +20,11 @@ jobs:
 
     working_directory: /go/src/github.com/matterpoll/matterpoll
     steps:
-      - checkout
-      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - run: make test
+      - codecov/upload:
+        file: {{ coverage_report_filepath }}
+      #- checkout
+      #- run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      #- run: make test
 
 workflows:
   version: 2
