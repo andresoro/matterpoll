@@ -4,8 +4,15 @@ import "github.com/matterpoll/matterpoll/server/poll"
 
 // Store allows the interaction with some kind of store.
 type Store interface {
+	Bot() BotStore
 	Poll() PollStore
 	System() SystemStore
+}
+
+// BotStore store information about the bot account
+type BotStore interface {
+	GetID() (string, error)
+	SaveID(id string) error
 }
 
 // PollStore allows the access polls in the store.

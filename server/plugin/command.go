@@ -96,7 +96,7 @@ func (p *MatterpollPlugin) ExecuteCommand(c *plugin.Context, args *model.Command
 		msg += "- `--progress`: " + p.LocalizeDefaultMessage(userLocalizer, commandHelpTextPollSettingProgress) + "\n"
 		msg += "- `--public-add-option`: " + p.LocalizeDefaultMessage(userLocalizer, commandHelpTextPollSettingPublicAddOption)
 
-		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, msg, siteURL, nil), nil
+		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, msg, siteURL), nil
 	}
 	if len(o) == 1 {
 		return nil, &model.AppError{
@@ -127,29 +127,39 @@ func (p *MatterpollPlugin) ExecuteCommand(c *plugin.Context, args *model.Command
 
 	if err := p.Store.Poll().Save(newPoll); err != nil {
 		p.API.LogError("failed to save poll", "err", err.Error())
-		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), siteURL, nil), nil
+		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), siteURL), nil
 	}
 
 	displayName, appErr := p.ConvertCreatorIDToDisplayName(creatorID)
 	if appErr != nil {
 		p.API.LogError("failed to ConvertCreatorIDToDisplayName", "err", appErr.Error())
-		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), siteURL, nil), nil
+		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), siteURL), nil
 	}
 
 	actions := newPoll.ToPostActions(publicLocalizer, *p.ServerConfig.ServiceSettings.SiteURL, PluginId, displayName)
-	response := getCommandResponse(model.COMMAND_RESPONSE_TYPE_IN_CHANNEL, "", *p.ServerConfig.ServiceSettings.SiteURL, actions)
-	p.API.LogDebug("Created a new poll", "response", response.ToJson())
-	return response, nil
+	post := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: args.ChannelId,
+		RootId:    args.RootId,
+		Type:      model.POST_DEFAULT,
+	}
+	model.ParseSlackAttachment(post, actions)
+
+	if _, appErr = p.API.CreatePost(post); appErr != nil {
+		p.API.LogError("failed to post poll post", "error", appErr.Error())
+		return getCommandResponse(model.COMMAND_RESPONSE_TYPE_EPHEMERAL, p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), siteURL), nil
+	}
+
+	p.API.LogDebug("Created a new poll", "post", post.ToJson())
+	return &model.CommandResponse{}, nil
 }
 
-func getCommandResponse(responseType, text, siteURL string, attachments []*model.SlackAttachment) *model.CommandResponse {
+func getCommandResponse(responseType, text, siteURL string) *model.CommandResponse {
 	return &model.CommandResponse{
 		ResponseType: responseType,
 		Text:         text,
 		Username:     responseUsername,
 		IconURL:      fmt.Sprintf(responseIconURL, siteURL, PluginId),
-		Type:         model.POST_DEFAULT,
-		Attachments:  attachments,
 	}
 }
 

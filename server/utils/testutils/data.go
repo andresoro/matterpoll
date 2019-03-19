@@ -14,6 +14,11 @@ func GetSiteURL() string {
 	return "https://example.org"
 }
 
+// GetBotUserID returns a static bot user ID.
+func GetBotUserID() string {
+	return "aegooso5na9desa0QuieV1ohfa"
+}
+
 // GetPoll returns a Poll with three Options, no votes and no Poll Settings.
 func GetPoll() *poll.Poll {
 	return &poll.Poll{

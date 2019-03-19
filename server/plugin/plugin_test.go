@@ -37,9 +37,10 @@ func setupTestPlugin(t *testing.T, api *plugintest.API, store *mockstore.Store, 
 	})
 
 	p.SetAPI(api)
-	p.Store = store
-	p.router = p.InitAPI()
 	p.bundle = &i18n.Bundle{}
+	p.botUserID = testutils.GetBotUserID()
+	p.router = p.InitAPI()
+	p.Store = store
 
 	return p
 }
@@ -115,23 +116,15 @@ func TestPluginOnActivate(t *testing.T) {
 			},
 			ShouldError: true,
 		},
-		/*
-			"GetBundlePath fails": {
-				SetupAPI: func(api *plugintest.API) *plugintest.API {
-					api.On("GetServerVersion").Return(minimumServerVersion)
-					api.On("GetBundlePath").Return("", errors.New(""))
-					return api
-				},
-				ShouldError: true,
-			},
-		*/
 	} {
 		t.Run(name, func(t *testing.T) {
 			api := test.SetupAPI(&plugintest.API{})
 			defer api.AssertExpectations(t)
 
 			patch := monkey.Patch(kvstore.NewStore, func(plugin.API, string) (store.Store, error) {
-				return &mockstore.Store{}, nil
+				store := &mockstore.Store{}
+				store.BotStore.On("GetID").Return(testutils.GetBotUserID(), nil)
+				return store, nil
 			})
 			defer patch.Unpatch()
 

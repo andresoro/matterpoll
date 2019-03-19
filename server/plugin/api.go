@@ -375,7 +375,7 @@ func (p *MatterpollPlugin) postEndPollAnnouncement(request *model.PostActionInte
 	publicLocalizer := p.getServerLocalizer()
 
 	endPost := &model.Post{
-		UserId:    request.UserId,
+		UserId:    p.botUserID,
 		ChannelId: channelID,
 		RootId:    request.PostId,
 		Message: p.LocalizeWithConfig(publicLocalizer, &i18n.LocalizeConfig{
@@ -385,11 +385,6 @@ func (p *MatterpollPlugin) postEndPollAnnouncement(request *model.PostActionInte
 				"Link":     link,
 			}}),
 		Type: model.POST_DEFAULT,
-		Props: model.StringInterface{
-			"override_username": responseUsername,
-			"override_icon_url": fmt.Sprintf(responseIconURL, *p.ServerConfig.ServiceSettings.SiteURL, PluginId),
-			"from_webhook":      "true",
-		},
 	}
 
 	if _, err = p.API.CreatePost(endPost); err != nil {

@@ -30,7 +30,6 @@ func TestPluginExecuteCommand(t *testing.T) {
 		Command              string
 		ExpectedResponseType string
 		ExpectedText         string
-		ExpectedAttachments  []*model.SlackAttachment
 		ShouldError          bool
 	}{
 		"No argument": {
@@ -39,7 +38,6 @@ func TestPluginExecuteCommand(t *testing.T) {
 			Command:              fmt.Sprintf("/%s", trigger),
 			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			ExpectedText:         helpText,
-			ExpectedAttachments:  nil,
 		},
 		"Help text": {
 			SetupAPI:             func(api *plugintest.API) *plugintest.API { return api },
@@ -47,7 +45,6 @@ func TestPluginExecuteCommand(t *testing.T) {
 			Command:              fmt.Sprintf("/%s help", trigger),
 			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			ExpectedText:         helpText,
-			ExpectedAttachments:  nil,
 		},
 		"Two arguments": {
 			SetupAPI:    func(api *plugintest.API) *plugintest.API { return api },
@@ -59,6 +56,16 @@ func TestPluginExecuteCommand(t *testing.T) {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
 				api.On("GetUser", "userID1").Return(&model.User{FirstName: "John", LastName: "Doe"}, nil)
 				api.On("LogDebug", GetMockArgumentsWithType("string", 3)...).Return()
+
+				post := &model.Post{
+					UserId:    testutils.GetBotUserID(),
+					ChannelId: "channelID1",
+					RootId:    "postID1",
+					Type:      model.POST_DEFAULT,
+				}
+				actions := testutils.GetPollTwoOptions().ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe")
+				model.ParseSlackAttachment(post, actions)
+				api.On("CreatePost", post).Return(post, nil)
 				return api
 			},
 			SetupStore: func(store *mockstore.Store) *mockstore.Store {
@@ -67,28 +74,66 @@ func TestPluginExecuteCommand(t *testing.T) {
 			},
 			Command:              fmt.Sprintf("/%s \"Question\"", trigger),
 			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-			ExpectedText:         "",
-			ExpectedAttachments:  testutils.GetPollTwoOptions().ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe"),
+		},
+		"Just question, CreatePost fails": {
+			SetupAPI: func(api *plugintest.API) *plugintest.API {
+				api.On("GetUser", "userID1").Return(&model.User{FirstName: "John", LastName: "Doe"}, nil)
+
+				post := &model.Post{
+					UserId:    testutils.GetBotUserID(),
+					ChannelId: "channelID1",
+					RootId:    "postID1",
+					Type:      model.POST_DEFAULT,
+				}
+				actions := testutils.GetPollTwoOptions().ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe")
+				model.ParseSlackAttachment(post, actions)
+				api.On("CreatePost", post).Return(nil, &model.AppError{})
+				api.On("LogError", GetMockArgumentsWithType("string", 3)...).Return()
+				return api
+			},
+			SetupStore: func(store *mockstore.Store) *mockstore.Store {
+				store.PollStore.On("Save", testutils.GetPollTwoOptions()).Return(nil)
+				return store
+			},
+			Command:              fmt.Sprintf("/%s \"Question\"", trigger),
+			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
 		},
 		"With 4 arguments": {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
 				api.On("GetUser", "userID1").Return(&model.User{FirstName: "John", LastName: "Doe"}, nil)
 				api.On("LogDebug", GetMockArgumentsWithType("string", 3)...).Return()
+
+				post := &model.Post{
+					UserId:    testutils.GetBotUserID(),
+					ChannelId: "channelID1",
+					RootId:    "postID1",
+					Type:      model.POST_DEFAULT,
+				}
+				actions := testutils.GetPoll().ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe")
+				model.ParseSlackAttachment(post, actions)
+				api.On("CreatePost", post).Return(post, nil)
 				return api
 			},
 			SetupStore: func(store *mockstore.Store) *mockstore.Store {
 				store.PollStore.On("Save", testutils.GetPoll()).Return(nil)
 				return store
 			},
-			Command:              fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\"", trigger),
-			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-			ExpectedText:         "",
-			ExpectedAttachments:  testutils.GetPoll().ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe"),
+			Command: fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\"", trigger),
 		},
 		"With 4 arguments and settting progress": {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
 				api.On("GetUser", "userID1").Return(&model.User{FirstName: "John", LastName: "Doe"}, nil)
 				api.On("LogDebug", GetMockArgumentsWithType("string", 3)...).Return()
+
+				post := &model.Post{
+					UserId:    testutils.GetBotUserID(),
+					ChannelId: "channelID1",
+					RootId:    "postID1",
+					Type:      model.POST_DEFAULT,
+				}
+				actions := testutils.GetPollWithSettings(poll.PollSettings{Progress: true}).ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe")
+				model.ParseSlackAttachment(post, actions)
+				api.On("CreatePost", post).Return(post, nil)
 				return api
 			},
 			SetupStore: func(store *mockstore.Store) *mockstore.Store {
@@ -96,14 +141,22 @@ func TestPluginExecuteCommand(t *testing.T) {
 				store.PollStore.On("Save", poll).Return(nil)
 				return store
 			},
-			Command:              fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\" --progress", trigger),
-			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-			ExpectedAttachments:  testutils.GetPollWithSettings(poll.PollSettings{Progress: true}).ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe"),
+			Command: fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\" --progress", trigger),
 		},
 		"With 4 arguments and settting anonymous and progress": {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
 				api.On("GetUser", "userID1").Return(&model.User{FirstName: "John", LastName: "Doe"}, nil)
 				api.On("LogDebug", GetMockArgumentsWithType("string", 3)...).Return()
+
+				post := &model.Post{
+					UserId:    testutils.GetBotUserID(),
+					ChannelId: "channelID1",
+					RootId:    "postID1",
+					Type:      model.POST_DEFAULT,
+				}
+				actions := testutils.GetPollWithSettings(poll.PollSettings{Progress: true, Anonymous: true}).ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe")
+				model.ParseSlackAttachment(post, actions)
+				api.On("CreatePost", post).Return(post, nil)
 				return api
 			},
 			SetupStore: func(store *mockstore.Store) *mockstore.Store {
@@ -111,10 +164,7 @@ func TestPluginExecuteCommand(t *testing.T) {
 				store.PollStore.On("Save", poll).Return(nil)
 				return store
 			},
-			Command:              fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\" --anonymous --progress", trigger),
-			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-			ExpectedText:         "",
-			ExpectedAttachments:  testutils.GetPollWithSettings(poll.PollSettings{Progress: true, Anonymous: true}).ToPostActions(testutils.GetLocalizer(), testutils.GetSiteURL(), PluginId, "John Doe"),
+			Command: fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\" --anonymous --progress", trigger),
 		},
 		"Store.Save fails": {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
@@ -128,7 +178,6 @@ func TestPluginExecuteCommand(t *testing.T) {
 			Command:              fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\"", trigger),
 			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			ExpectedText:         commandErrorGeneric.Other,
-			ExpectedAttachments:  nil,
 		},
 		"GetUser fails": {
 			SetupAPI: func(api *plugintest.API) *plugintest.API {
@@ -144,7 +193,6 @@ func TestPluginExecuteCommand(t *testing.T) {
 			Command:              fmt.Sprintf("/%s \"Question\" \"Answer 1\" \"Answer 2\" \"Answer 3\"", trigger),
 			ExpectedResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			ExpectedText:         commandErrorGeneric.Other,
-			ExpectedAttachments:  nil,
 		},
 		"Invalid setting": {
 			SetupAPI:    func(api *plugintest.API) *plugintest.API { return api },
@@ -170,8 +218,10 @@ func TestPluginExecuteCommand(t *testing.T) {
 			defer patch2.Unpatch()
 
 			r, err := p.ExecuteCommand(nil, &model.CommandArgs{
-				Command: test.Command,
-				UserId:  "userID1",
+				Command:   test.Command,
+				UserId:    "userID1",
+				ChannelId: "channelID1",
+				RootId:    "postID1",
 			})
 
 			if test.ShouldError {
@@ -180,12 +230,13 @@ func TestPluginExecuteCommand(t *testing.T) {
 			} else {
 				assert.Nil(err)
 				require.NotNil(t, r)
-				assert.Equal(model.POST_DEFAULT, r.Type)
-				assert.Equal(responseUsername, r.Username)
-				assert.Equal(fmt.Sprintf(responseIconURL, testutils.GetSiteURL(), PluginId), r.IconURL)
-				assert.Equal(test.ExpectedResponseType, r.ResponseType)
-				assert.Equal(test.ExpectedText, r.Text)
-				assert.Equal(test.ExpectedAttachments, r.Attachments)
+				if test.ExpectedText != "" {
+					assert.Equal(responseUsername, r.Username)
+					assert.Equal(fmt.Sprintf(responseIconURL, testutils.GetSiteURL(), PluginId), r.IconURL)
+					assert.Equal(test.ExpectedResponseType, r.ResponseType)
+					assert.Equal(test.ExpectedText, r.Text)
+					assert.Nil(r.Attachments)
+				}
 			}
 		})
 	}

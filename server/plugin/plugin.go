@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"sync"
 
 	"github.com/blang/semver"
@@ -18,8 +20,10 @@ import (
 // MatterpollPlugin is the object to run the plugin
 type MatterpollPlugin struct {
 	plugin.MattermostPlugin
-	router *mux.Router
-	Store  store.Store
+	botUserID string
+	bundle    *i18n.Bundle
+	router    *mux.Router
+	Store     store.Store
 
 	// configurationLock synchronizes access to the configuration.
 	configurationLock sync.RWMutex
@@ -28,8 +32,6 @@ type MatterpollPlugin struct {
 	// setConfiguration for usage.
 	configuration *configuration
 	ServerConfig  *model.Config
-
-	bundle *i18n.Bundle
 }
 
 const minimumServerVersion = "5.6.0" // TODO: Update to 5.10.0 once it's available
@@ -42,17 +44,21 @@ func (p *MatterpollPlugin) OnActivate() error {
 
 	store, err := kvstore.NewStore(p.API, PluginVersion)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create store")
 	}
 	p.Store = store
-
-	p.router = p.InitAPI()
 
 	bundle, err := p.initBundle()
 	if err != nil {
 		return errors.Wrap(err, "failed to init localisation bundle")
 	}
 	p.bundle = bundle
+
+	if err := p.ensureBotAccount(); err != nil {
+		return errors.Wrap(err, "failed to ensure bot account")
+	}
+
+	p.router = p.InitAPI()
 
 	return nil
 }
@@ -78,6 +84,48 @@ func (p *MatterpollPlugin) checkServerVersion() error {
 		return fmt.Errorf("this plugin requires Mattermost v%s or later", minimumServerVersion)
 	}
 
+	return nil
+}
+
+// ensureBotAccount checks if the bot account exists and creates him if doesn't
+func (p *MatterpollPlugin) ensureBotAccount() error {
+	botUserID, err := p.Store.Bot().GetID()
+	if err != nil {
+		return errors.Wrap(err, "failed to get bot user from store")
+	}
+	if botUserID == "" {
+		bundlePath, err := p.API.GetBundlePath()
+		if err != nil {
+			return errors.Wrap(err, "failed to get bundle path")
+		}
+
+		profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "logo_dark.png"))
+		if err != nil {
+			return errors.Wrap(err, "failed to read profile image")
+		}
+
+		bot := &model.Bot{
+			Username:    "matterpoll",
+			DisplayName: "Matterpoll",
+			Description: "Some description",
+		}
+
+		rbot, appErr := p.API.CreateBot(bot)
+		if appErr != nil {
+			return errors.Wrap(appErr, "failed to create bot account")
+		}
+		botUserID = rbot.UserId
+
+		if appErr := p.API.SetProfileImage(botUserID, profileImage); appErr != nil {
+			return errors.Wrap(err, "failed to set profile image")
+		}
+
+		if err = p.Store.Bot().SaveID(botUserID); err != nil {
+			return errors.Wrap(err, "failed to store bot id to store")
+		}
+	}
+
+	p.botUserID = botUserID
 	return nil
 }
 
@@ -127,5 +175,8 @@ func (p *MatterpollPlugin) SendEphemeralPost(channelID, userID, message string) 
 	ephemeralPost.AddProp("override_username", responseUsername)
 	ephemeralPost.AddProp("override_icon_url", fmt.Sprintf(responseIconURL, *p.ServerConfig.ServiceSettings.SiteURL, PluginId))
 	ephemeralPost.AddProp("from_webhook", "true")
-	_ = p.API.SendEphemeralPost(userID, ephemeralPost)
+	err := p.API.SendEphemeralPost(userID, ephemeralPost)
+	if err != nil {
+		p.API.LogWarn("failed to send ephemeral post")
+	}
 }

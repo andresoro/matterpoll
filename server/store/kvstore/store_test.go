@@ -11,6 +11,9 @@ import (
 func setupTestStore(api *plugintest.API) *Store {
 	store := Store{
 		api: api,
+		botStore: BotStore{
+			api: api,
+		},
 		pollStore: PollStore{
 			api: api,
 		},
