@@ -34,7 +34,17 @@ type MatterpollPlugin struct {
 	ServerConfig  *model.Config
 }
 
-const minimumServerVersion = "5.6.0" // TODO: Update to 5.10.0 once it's available
+var botDescription = &i18n.Message{
+	ID:    "bot.description",
+	Other: "Poll Bot",
+}
+
+const (
+	minimumServerVersion = "5.6.0" // TODO: Update to 5.10.0 once it's available
+
+	botUserName    = "matterpoll"
+	botDisplayName = "Matterpoll"
+)
 
 // OnActivate ensures a configuration is set and initializes the API
 func (p *MatterpollPlugin) OnActivate() error {
@@ -54,8 +64,14 @@ func (p *MatterpollPlugin) OnActivate() error {
 	}
 	p.bundle = bundle
 
-	if err := p.ensureBotAccount(); err != nil {
+	botID, err := p.ensureBotAccount()
+	if err != nil {
 		return errors.Wrap(err, "failed to ensure bot account")
+	}
+	p.botUserID = botID
+
+	if err := p.setProfileImage(); err != nil {
+		return errors.Wrap(err, "failed to set profile image")
 	}
 
 	p.router = p.InitAPI()
@@ -88,44 +104,66 @@ func (p *MatterpollPlugin) checkServerVersion() error {
 }
 
 // ensureBotAccount checks if the bot account exists and creates him if doesn't
-func (p *MatterpollPlugin) ensureBotAccount() error {
+func (p *MatterpollPlugin) ensureBotAccount() (string, error) {
 	botUserID, err := p.Store.Bot().GetID()
 	if err != nil {
-		return errors.Wrap(err, "failed to get bot user from store")
+		return "", errors.Wrap(err, "failed to get bot user from store")
 	}
 	if botUserID == "" {
-		bundlePath, err := p.API.GetBundlePath()
-		if err != nil {
-			return errors.Wrap(err, "failed to get bundle path")
+		// Try to get existing bot
+		user, appErr := p.API.GetUserByUsername(botUserName)
+		if appErr != nil && appErr.StatusCode != 404 {
+			return "", errors.Wrap(appErr, "failed to get user")
 		}
 
-		profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "logo_dark.png"))
-		if err != nil {
-			return errors.Wrap(err, "failed to read profile image")
-		}
+		if user != nil {
+			// Try to use existing user account
+			if !user.IsBot {
+				return "", errors.Errorf("normal user account with username %s allready exists", botUserName)
+			}
+			botUserID = user.Id
+		} else {
+			// Creating a new bot
+			bot := &model.Bot{
+				Username:    botUserName,
+				DisplayName: botDisplayName,
+			}
 
-		bot := &model.Bot{
-			Username:    "matterpoll",
-			DisplayName: "Matterpoll",
-			Description: "Some description",
+			rbot, appErr := p.API.CreateBot(bot)
+			if appErr != nil {
+				return "", errors.Wrap(appErr, "failed to create bot account")
+			}
+			botUserID = rbot.UserId
 		}
-
-		rbot, appErr := p.API.CreateBot(bot)
-		if appErr != nil {
-			return errors.Wrap(appErr, "failed to create bot account")
-		}
-		botUserID = rbot.UserId
-
-		if appErr := p.API.SetProfileImage(botUserID, profileImage); appErr != nil {
-			return errors.Wrap(err, "failed to set profile image")
-		}
-
 		if err = p.Store.Bot().SaveID(botUserID); err != nil {
-			return errors.Wrap(err, "failed to store bot id to store")
+			return "", errors.Wrap(err, "failed to store bot id to store")
 		}
 	}
 
-	p.botUserID = botUserID
+	// Update description with server local
+	publicLocalizer := p.getServerLocalizer()
+	description := p.LocalizeDefaultMessage(publicLocalizer, botDescription)
+	_, err = p.API.PatchBot(botUserID, &model.BotPatch{
+		Description: &description,
+	})
+
+	return botUserID, nil
+}
+
+// setProfileImage set the profile image of the bot account
+func (p *MatterpollPlugin) setProfileImage() error {
+	bundlePath, err := p.API.GetBundlePath()
+	if err != nil {
+		return errors.Wrap(err, "failed to get bundle path")
+	}
+
+	profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "logo_dark.png"))
+	if err != nil {
+		return errors.Wrap(err, "failed to read profile image")
+	}
+	if appErr := p.API.SetProfileImage(p.botUserID, profileImage); appErr != nil {
+		return errors.Wrap(err, "failed to set profile image")
+	}
 	return nil
 }
 

@@ -61,6 +61,8 @@ func TestPluginOnActivate(t *testing.T) {
 				path, err := filepath.Abs("../..")
 				require.Nil(t, err)
 				api.On("GetBundlePath").Return(path, nil)
+				api.On("PatchBot", testutils.GetBotUserID(), &model.BotPatch{Description: &botDescription.Other}).Return(nil, nil)
+				api.On("SetProfileImage", testutils.GetBotUserID(), mock.Anything).Return(nil)
 				return api
 			},
 			ShouldError: false,
@@ -72,6 +74,8 @@ func TestPluginOnActivate(t *testing.T) {
 				path, err := filepath.Abs("../..")
 				require.Nil(t, err)
 				api.On("GetBundlePath").Return(path, nil)
+				api.On("PatchBot", testutils.GetBotUserID(), &model.BotPatch{Description: &botDescription.Other}).Return(nil, nil)
+				api.On("SetProfileImage", testutils.GetBotUserID(), mock.Anything).Return(nil)
 				return api
 			},
 			ShouldError: false,
@@ -128,7 +132,14 @@ func TestPluginOnActivate(t *testing.T) {
 			})
 			defer patch.Unpatch()
 
-			p := &MatterpollPlugin{}
+			defaultServerLocale := "en"
+			p := &MatterpollPlugin{
+				ServerConfig: &model.Config{
+					LocalizationSettings: model.LocalizationSettings{
+						DefaultServerLocale: &defaultServerLocale,
+					},
+				},
+			}
 			p.setConfiguration(&configuration{
 				Trigger: "poll",
 			})
