@@ -147,9 +147,13 @@ func (p *MatterpollPlugin) ensureBotAccount() (string, error) {
 	// Update description with server local
 	publicLocalizer := p.getServerLocalizer()
 	description := p.LocalizeDefaultMessage(publicLocalizer, botDescription)
-	_, err = p.API.PatchBot(botUserID, &model.BotPatch{
+	botPatch := &model.BotPatch{
 		Description: &description,
-	})
+	}
+
+	if _, appErr := p.API.PatchBot(botUserID, botPatch); appErr != nil {
+		return "", errors.Wrap(appErr, "failed to patch bot description")
+	}
 
 	return botUserID, nil
 }
