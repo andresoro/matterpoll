@@ -132,11 +132,15 @@ func TestPluginOnActivate(t *testing.T) {
 			})
 			defer patch.Unpatch()
 
+			siteURL := testutils.GetSiteURL()
 			defaultServerLocale := "en"
 			p := &MatterpollPlugin{
 				ServerConfig: &model.Config{
 					LocalizationSettings: model.LocalizationSettings{
 						DefaultServerLocale: &defaultServerLocale,
+					},
+					ServiceSettings: model.ServiceSettings{
+						SiteURL: &siteURL,
 					},
 				},
 			}
@@ -163,7 +167,39 @@ func TestPluginOnActivate(t *testing.T) {
 		})
 		defer patch.Unpatch()
 
-		p := &MatterpollPlugin{}
+		siteURL := testutils.GetSiteURL()
+		p := &MatterpollPlugin{
+			ServerConfig: &model.Config{
+				ServiceSettings: model.ServiceSettings{
+					SiteURL: &siteURL,
+				},
+			},
+		}
+		p.setConfiguration(&configuration{
+			Trigger: "poll",
+		})
+		p.SetAPI(api)
+		err := p.OnActivate()
+
+		assert.NotNil(t, err)
+	})
+	t.Run("SiteURL not set", func(t *testing.T) {
+		api := &plugintest.API{}
+		api.On("GetServerVersion").Return(minimumServerVersion)
+		defer api.AssertExpectations(t)
+
+		patch := monkey.Patch(kvstore.NewStore, func(plugin.API, string) (store.Store, error) {
+			return nil, &model.AppError{}
+		})
+		defer patch.Unpatch()
+
+		p := &MatterpollPlugin{
+			ServerConfig: &model.Config{
+				ServiceSettings: model.ServiceSettings{
+					SiteURL: nil,
+				},
+			},
+		}
 		p.setConfiguration(&configuration{
 			Trigger: "poll",
 		})
