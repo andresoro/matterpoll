@@ -221,8 +221,5 @@ func (p *MatterpollPlugin) SendEphemeralPost(channelID, userID, message string) 
 	ephemeralPost.AddProp("override_username", responseUsername)
 	ephemeralPost.AddProp("override_icon_url", fmt.Sprintf(responseIconURL, *p.ServerConfig.ServiceSettings.SiteURL, PluginId))
 	ephemeralPost.AddProp("from_webhook", "true")
-	err := p.API.SendEphemeralPost(userID, ephemeralPost)
-	if err != nil {
-		p.API.LogWarn("failed to send ephemeral post")
-	}
+	_ = p.API.SendEphemeralPost(userID, ephemeralPost)
 }
